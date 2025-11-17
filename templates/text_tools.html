@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Text Tools - PyToolsHub.in{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-textarea-t"></i> Text Tools</h4>
+                </div>
+                <div class="card-body">
+                    <form id="textForm">
+                        <div class="mb-3">
+                            <label for="textInput" class="form-label">Enter your text:</label>
+                            <textarea class="form-control" id="textInput" rows="8" 
+                                placeholder="Type or paste your text here..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="operation" class="form-label">Select Operation</label>
+                            <select class="form-select" id="operation" required>
+                                <option value="count">Word & Character Count</option>
+                                <option value="uppercase">Convert to UPPERCASE</option>
+                                <option value="lowercase">Convert to lowercase</option>
+                                <option value="titlecase">Convert to Title Case</option>
+                                <option value="reverse">Reverse Text</option>
+                                <option value="trim">Trim Whitespace</option>
+                                <option value="remove_extra_spaces">Remove Extra Spaces</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-info">Process Text</button>
+                        <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
+                    </form>
+                    
+                    <div id="stats" class="mt-4" style="display: none;">
+                        <div class="alert alert-info">
+                            <h5>Text Statistics:</h5>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Words:</strong> <span id="wordCount"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Characters:</strong> <span id="charCount"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Characters (no spaces):</strong> <span id="charNoSpaceCount"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Lines:</strong> <span id="lineCount"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="result" class="mt-4" style="display: none;">
+                        <div class="alert alert-success">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">Result:</h5>
+                                <button class="btn btn-sm btn-primary" id="copyBtn">
+                                    <i class="bi bi-clipboard"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-light p-3 rounded">
+                            <pre id="resultText" class="mb-0" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        </div>
+                    </div>
+                    
+                    <div id="error" class="mt-4" style="display: none;">
+                        <div class="alert alert-danger" id="errorMessage"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('textForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const text = document.getElementById('textInput').value;
+    const operation = document.getElementById('operation').value;
+    
+    try {
+        const response = await fetch('/api/text-process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text, operation })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('resultText').textContent = data.result;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            if (data.stats && Object.keys(data.stats).length > 0) {
+                document.getElementById('wordCount').textContent = data.stats.words;
+                document.getElementById('charCount').textContent = data.stats.characters;
+                document.getElementById('charNoSpaceCount').textContent = data.stats.characters_no_space;
+                document.getElementById('lineCount').textContent = data.stats.lines;
+                document.getElementById('stats').style.display = 'block';
+            } else {
+                document.getElementById('stats').style.display = 'none';
+            }
+        } else {
+            document.getElementById('errorMessage').textContent = data.error;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+        }
+    } catch (error) {
+        document.getElementById('errorMessage').textContent = 'An error occurred: ' + error.message;
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('stats').style.display = 'none';
+    }
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('textInput').value = '';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('stats').style.display = 'none';
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+    const text = document.getElementById('resultText').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 2000);
+    });
+});
+</script>
+{% endblock %}

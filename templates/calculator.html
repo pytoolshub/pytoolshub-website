@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Calculator - PyToolsHub.in{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-calculator-fill"></i> Calculator</h4>
+                </div>
+                <div class="card-body">
+                    <form id="calculatorForm">
+                        <div class="mb-3">
+                            <label for="num1" class="form-label">First Number</label>
+                            <input type="number" class="form-control" id="num1" step="any" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="operation" class="form-label">Operation</label>
+                            <select class="form-select" id="operation" required>
+                                <option value="add">Addition (+)</option>
+                                <option value="subtract">Subtraction (-)</option>
+                                <option value="multiply">Multiplication (×)</option>
+                                <option value="divide">Division (÷)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="num2" class="form-label">Second Number</label>
+                            <input type="number" class="form-control" id="num2" step="any" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Calculate</button>
+                    </form>
+                    <div id="result" class="mt-4" style="display: none;">
+                        <div class="alert alert-success">
+                            <h5>Result:</h5>
+                            <h3 id="resultValue"></h3>
+                        </div>
+                    </div>
+                    <div id="error" class="mt-4" style="display: none;">
+                        <div class="alert alert-danger" id="errorMessage"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('calculatorForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const num1 = parseFloat(document.getElementById('num1').value);
+    const num2 = parseFloat(document.getElementById('num2').value);
+    const operation = document.getElementById('operation').value;
+    
+    try {
+        const response = await fetch('/api/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ num1, num2, operation })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('resultValue').textContent = data.result;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+        } else {
+            document.getElementById('errorMessage').textContent = data.error;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+    } catch (error) {
+        document.getElementById('errorMessage').textContent = 'An error occurred: ' + error.message;
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
