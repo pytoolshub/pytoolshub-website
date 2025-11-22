@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Age Calculator</h2>
+
+<form method="POST">
+    <label>Enter Date of Birth:</label>
+    <input type="date" name="dob" required>
+    <button type="submit">Calculate Age</button>
+</form>
+
+{% if age %}
+    <h3>Your Age:</h3>
+    <p>{{ age.years }} years, {{ age.months }} months, {{ age.days }} days</p>
+{% endif %}
+
+{% endblock %}
