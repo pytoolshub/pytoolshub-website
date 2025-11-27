@@ -80,6 +80,75 @@ def age():
 
     return render_template("age.html", age=result)
 
+# ---------------- CALCULATOR ----------------
+@app.route("/calculator", methods=["GET", "POST"])
+def calculator():
+    result = None
+    if request.method == "POST":
+        num1 = float(request.form["num1"])
+        num2 = float(request.form["num2"])
+        operation = request.form["operation"]
+
+        if operation == "add":
+            result = num1 + num2
+        elif operation == "subtract":
+            result = num1 - num2
+        elif operation == "multiply":
+            result = num1 * num2
+        elif operation == "divide":
+            result = num1 / num2
+
+    return render_template("calculator.html", result=result)
+
+
+# ---------------- CONVERTER ----------------
+@app.route("/converter", methods=["GET", "POST"])
+def converter():
+    result = None
+    if request.method == "POST":
+        value = float(request.form["value"])
+        unit = request.form["unit"]
+
+        if unit == "cm-to-m":
+            result = value / 100
+        elif unit == "m-to-cm":
+            result = value * 100
+
+    return render_template("converter.html", result=result)
+
+
+# ---------------- JSON FORMATTER ----------------
+@app.route("/json-formatter", methods=["GET", "POST"])
+def json_formatter():
+    formatted = None
+    if request.method == "POST":
+        raw_json = request.form["json_input"]
+        try:
+            import json
+            parsed = json.loads(raw_json)
+            formatted = json.dumps(parsed, indent=4)
+        except:
+            formatted = "Invalid JSON!"
+
+    return render_template("json_formatter.html", result=formatted)
+
+
+# ---------------- TEXT TOOLS ----------------
+@app.route("/text-tools", methods=["GET", "POST"])
+def text_tools():
+    result = None
+    if request.method == "POST":
+        text = request.form["text"]
+        action = request.form["action"]
+
+        if action == "upper":
+            result = text.upper()
+        elif action == "lower":
+            result = text.lower()
+        elif action == "title":
+            result = text.title()
+
+    return render_template("text_tools.html", result=result)
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
