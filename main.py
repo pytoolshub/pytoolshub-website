@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import random
 import qrcode
 from PIL import Image
 import base64
 from io import BytesIO
 from datetime import datetime
+import json
 
 app = Flask(__name__)
-
 
 # ---------------- HOME ----------------
 @app.route("/")
@@ -21,7 +21,7 @@ def bmi():
     bmi_result = None
     if request.method == "POST":
         weight = float(request.form["weight"])
-        height = float(request.form["height"]) / 100  # convert cm to meters
+        height = float(request.form["height"]) / 100
         bmi_value = weight / (height * height)
         bmi_result = round(bmi_value, 2)
     return render_template("bmi.html", result=bmi_result)
@@ -34,8 +34,7 @@ def password():
     if request.method == "POST":
         length = int(request.form["length"])
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-        generated_password = "".join(
-            random.choice(chars) for _ in range(length))
+        generated_password = "".join(random.choice(chars) for _ in range(length))
     return render_template("password.html", password=generated_password)
 
 
@@ -80,76 +79,74 @@ def age():
 
     return render_template("age.html", age=result)
 
-# ---------------- CALCULATOR ----------------
-@app.route("/calculator", methods=["GET", "POST"])
-def calculator():
-    result = None
-    if request.method == "POST":
-        num1 = float(request.form["num1"])
-        num2 = float(request.form["num2"])
-        operation = request.form["operation"]
 
-        if operation == "add":
-            result = num1 + num2
-        elif operation == "subtract":
-            result = num1 - num2
-        elif operation == "multiply":
-            result = num1 * num2
-        elif operation == "divide":
-            result = num1 / num2
+# ---------------- CALCULATOR API ----------------
+@app.route("/api/calc", methods=["POST"])
+def api_calc():
+    data = request.json
+    a = float(data["a"])
+    b = float(data["b"])
+    op = data["op"]
 
-    return render_template("calculator.html", result=result)
+    if op == "+": result = a + b
+    elif op == "-": result = a - b
+    elif op == "*": result = a * b
+    elif op == "/": result = a / b
+    else: result = "Invalid operation"
+
+    return jsonify({"result": result})
 
 
-# ---------------- CONVERTER ----------------
-@app.route("/converter", methods=["GET", "POST"])
-def converter():
-    result = None
-    if request.method == "POST":
-        value = float(request.form["value"])
-        unit = request.form["unit"]
+# ---------------- CONVERTER API ----------------
+@app.route("/api/convert", methods=["POST"])
+def api_convert():
+    data = request.json
+    value = float(data["value"])
+    from_unit = data["from"]
+    to_unit = data["to"]
 
-        if unit == "cm-to-m":
-            result = value / 100
-        elif unit == "m-to-cm":
-            result = value * 100
+    length_units = {
+        "meter": 1,
+        "kilometer": 0.001,
+        "centimeter": 100,
+        "millimeter": 1000
+    }
 
-    return render_template("converter.html", result=result)
-
-
-# ---------------- JSON FORMATTER ----------------
-@app.route("/json-formatter", methods=["GET", "POST"])
-def json_formatter():
-    formatted = None
-    if request.method == "POST":
-        raw_json = request.form["json_input"]
-        try:
-            import json
-            parsed = json.loads(raw_json)
-            formatted = json.dumps(parsed, indent=4)
-        except:
-            formatted = "Invalid JSON!"
-
-    return render_template("json_formatter.html", result=formatted)
+    if from_unit in length_units and to_unit in length_units:
+        result = value * (length_units[to_unit] / length_units[from_unit])
+        return jsonify({"result": result})
+    else:
+        return jsonify({"error": "Invalid units"})
 
 
-# ---------------- TEXT TOOLS ----------------
-@app.route("/text-tools", methods=["GET", "POST"])
-def text_tools():
-    result = None
-    if request.method == "POST":
-        text = request.form["text"]
-        action = request.form["action"]
+# ---------------- JSON FORMATTER API ----------------
+@app.route("/api/format_json", methods=["POST"])
+def api_format_json():
+    try:
+        input_data = request.json["data"]
+        parsed = json.loads(input_data)
+        return jsonify({"result": json.dumps(parsed, indent=4)})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
-        if action == "upper":
-            result = text.upper()
-        elif action == "lower":
-            result = text.lower()
-        elif action == "title":
-            result = text.title()
 
-    return render_template("text_tools.html", result=result)
+# ---------------- TEXT TOOLS API ----------------
+@app.route("/api/text", methods=["POST"])
+def api_text_tools():
+    data = request.json
+    text = data["text"]
+    action = data["action"]
 
-# ---------------- RUN ----------------
+    if action == "upper":
+        return jsonify({"result": text.upper()})
+    elif action == "lower":
+        return jsonify({"result": text.lower()})
+    elif action == "title":
+        return jsonify({"result": text.title()})
+    else:
+        return jsonify({"error": "Invalid action"})
+
+
+# ---------------- RUN SERVER ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=81, debug=True)
