@@ -9,6 +9,7 @@ import json
 
 app = Flask(__name__)
 
+
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
@@ -21,7 +22,7 @@ def bmi():
     bmi_result = None
     if request.method == "POST":
         weight = float(request.form["weight"])
-        height = float(request.form["height"]) / 100
+        height = float(request.form["height"]) / 100  # convert CM to meter
         bmi_value = weight / (height * height)
         bmi_result = round(bmi_value, 2)
     return render_template("bmi.html", result=bmi_result)
@@ -80,6 +81,31 @@ def age():
     return render_template("age.html", age=result)
 
 
+# --------------------------------------------------------
+#   PAGE ROUTES (REQUIRED FOR UI TO LOAD)
+# --------------------------------------------------------
+
+@app.route("/calculator")
+def calculator_page():
+    return render_template("calculator.html")
+
+@app.route("/converter")
+def converter_page():
+    return render_template("converter.html")
+
+@app.route("/json-formatter")
+def json_page():
+    return render_template("json.html")
+
+@app.route("/text-tools")
+def text_page():
+    return render_template("text.html")
+
+
+# --------------------------------------------------------
+#   API ROUTES (CALLED BY JAVASCRIPT)
+# --------------------------------------------------------
+
 # ---------------- CALCULATOR API ----------------
 @app.route("/api/calc", methods=["POST"])
 def api_calc():
@@ -91,8 +117,10 @@ def api_calc():
     if op == "+": result = a + b
     elif op == "-": result = a - b
     elif op == "*": result = a * b
-    elif op == "/": result = a / b
-    else: result = "Invalid operation"
+    elif op == "/":
+        result = a / b if b != 0 else "Cannot divide by zero"
+    else:
+        result = "Invalid operation"
 
     return jsonify({"result": result})
 
@@ -101,6 +129,7 @@ def api_calc():
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
     data = request.json
+
     value = float(data["value"])
     from_unit = data["from"]
     to_unit = data["to"]
@@ -115,8 +144,8 @@ def api_convert():
     if from_unit in length_units and to_unit in length_units:
         result = value * (length_units[to_unit] / length_units[from_unit])
         return jsonify({"result": result})
-    else:
-        return jsonify({"error": "Invalid units"})
+
+    return jsonify({"error": "Invalid units"})
 
 
 # ---------------- JSON FORMATTER API ----------------
@@ -143,10 +172,10 @@ def api_text_tools():
         return jsonify({"result": text.lower()})
     elif action == "title":
         return jsonify({"result": text.title()})
-    else:
-        return jsonify({"error": "Invalid action"})
+
+    return jsonify({"error": "Invalid action"})
 
 
 # ---------------- RUN SERVER ----------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=81, debug=True)
+    app.run(host="0.0.0.0", port=81)
