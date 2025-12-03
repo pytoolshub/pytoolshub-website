@@ -10,41 +10,51 @@
                 <div class="card-header bg-success text-white">
                     <h4 class="mb-0"><i class="bi bi-arrows-angle-expand"></i> Unit Converter</h4>
                 </div>
+
                 <div class="card-body">
                     <form id="converterForm">
-                        <div class="mb-3">
-                            <label for="category" class="form-label">Category</label>
-                            <select class="form-select" id="category" required>
-                                <option value="length">Length</option>
-                                <option value="weight">Weight</option>
-                                <option value="temperature">Temperature</option>
-                            </select>
-                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="value" class="form-label">Value</label>
+                                <label class="form-label">Value</label>
                                 <input type="number" class="form-control" id="value" step="any" required>
                             </div>
+
                             <div class="col-md-6 mb-3">
-                                <label for="fromUnit" class="form-label">From</label>
-                                <select class="form-select" id="fromUnit" required></select>
+                                <label class="form-label">From</label>
+                                <select class="form-select" id="fromUnit" required>
+                                    <option value="meter">Meter</option>
+                                    <option value="kilometer">Kilometer</option>
+                                    <option value="centimeter">Centimeter</option>
+                                    <option value="millimeter">Millimeter</option>
+                                </select>
                             </div>
                         </div>
+
                         <div class="mb-3">
-                            <label for="toUnit" class="form-label">To</label>
-                            <select class="form-select" id="toUnit" required></select>
+                            <label class="form-label">To</label>
+                            <select class="form-select" id="toUnit" required>
+                                <option value="kilometer">Kilometer</option>
+                                <option value="meter">Meter</option>
+                                <option value="centimeter">Centimeter</option>
+                                <option value="millimeter">Millimeter</option>
+                            </select>
                         </div>
+
                         <button type="submit" class="btn btn-success w-100">Convert</button>
                     </form>
+
                     <div id="result" class="mt-4" style="display: none;">
                         <div class="alert alert-success">
                             <h5>Result:</h5>
                             <h3 id="resultValue"></h3>
                         </div>
                     </div>
+
                     <div id="error" class="mt-4" style="display: none;">
                         <div class="alert alert-danger" id="errorMessage"></div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -54,57 +64,26 @@
 
 {% block extra_js %}
 <script>
-const units = {
-    length: ['meter', 'kilometer', 'centimeter', 'millimeter', 'mile', 'yard', 'foot', 'inch'],
-    weight: ['kilogram', 'gram', 'milligram', 'pound', 'ounce'],
-    temperature: ['celsius', 'fahrenheit', 'kelvin']
-};
-
-function updateUnits() {
-    const category = document.getElementById('category').value;
-    const fromUnit = document.getElementById('fromUnit');
-    const toUnit = document.getElementById('toUnit');
-    
-    fromUnit.innerHTML = '';
-    toUnit.innerHTML = '';
-    
-    units[category].forEach(unit => {
-        fromUnit.add(new Option(unit.charAt(0).toUpperCase() + unit.slice(1), unit));
-        toUnit.add(new Option(unit.charAt(0).toUpperCase() + unit.slice(1), unit));
-    });
-    
-    if (units[category].length > 1) {
-        toUnit.selectedIndex = 1;
-    }
-}
-
-document.getElementById('category').addEventListener('change', updateUnits);
-updateUnits();
-
 document.getElementById('converterForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const value = parseFloat(document.getElementById('value').value);
-    const category = document.getElementById('category').value;
-    const from_unit = document.getElementById('fromUnit').value;
-    const to_unit = document.getElementById('toUnit').value;
-    
+    const from = document.getElementById('fromUnit').value;
+    const to = document.getElementById('toUnit').value;
+
     try {
         const response = await fetch('/api/convert', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ value, category, from_unit, to_unit })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value, from, to })
         });
-        
+
         const data = await response.json();
-        
-        if (response.ok) {
-            const fromUnitName = from_unit.charAt(0).toUpperCase() + from_unit.slice(1);
-            const toUnitName = to_unit.charAt(0).toUpperCase() + to_unit.slice(1);
-            document.getElementById('resultValue').textContent = 
-                `${value} ${fromUnitName} = ${data.result.toFixed(4)} ${toUnitName}`;
+
+        if (data.ok) {
+            document.getElementById('resultValue').textContent =
+                `${value} ${from} = ${data.result.toFixed(4)} ${to}`;
+
             document.getElementById('result').style.display = 'block';
             document.getElementById('error').style.display = 'none';
         } else {
@@ -112,8 +91,9 @@ document.getElementById('converterForm').addEventListener('submit', async (e) =>
             document.getElementById('error').style.display = 'block';
             document.getElementById('result').style.display = 'none';
         }
-    } catch (error) {
-        document.getElementById('errorMessage').textContent = 'An error occurred: ' + error.message;
+
+    } catch (err) {
+        document.getElementById('errorMessage').textContent = 'Error: ' + err.message;
         document.getElementById('error').style.display = 'block';
         document.getElementById('result').style.display = 'none';
     }
