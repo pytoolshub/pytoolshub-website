@@ -117,19 +117,29 @@ def favicon():
     return send_from_directory('static', 'favicon.ico')
 
 
-# ----------------------
-# API: Calculator
-# Template calls: POST /api/calculate with { num1, num2, operation }
-# operations in template: 'add','subtract','multiply','divide'
-# ----------------------
 @app.route("/api/calculate", methods=["POST"])
 def api_calculate():
     try:
-        data = request.get_json(force=True)
-        num1 = float(data.get("num1", 0))
-        num2 = float(data.get("num2", 0))
-        op = (data.get("operation") or "").lower()
+        data = request.get_json(force=True) or {}
 
+        # Validate num1
+        try:
+            num1 = float(data.get("num1", 0))
+        except (TypeError, ValueError):
+            return json_err("Invalid input for num1", 400)
+
+        # Validate num2
+        try:
+            num2 = float(data.get("num2", 0))
+        except (TypeError, ValueError):
+            return json_err("Invalid input for num2", 400)
+
+        # Validate operation
+        op = (data.get("operation") or "").strip().lower()
+        if not op:
+            return json_err("Operation not specified", 400)
+
+        # Perform calculation
         if op in ("add", "+"):
             result = num1 + num2
         elif op in ("subtract", "-"):
@@ -138,15 +148,17 @@ def api_calculate():
             result = num1 * num2
         elif op in ("divide", "/"):
             if num2 == 0:
-                return json_err("Division by zero", 400)
+                return json_err("Division by zero is not allowed", 400)
             result = num1 / num2
         else:
-            return json_err("Invalid operation", 400)
+            return json_err(f"Invalid operation: {op}", 400)
 
-        return jsonify({"result": result})
+        # Return success JSON
+        return jsonify({"ok": True, "result": result})
+
     except Exception as e:
-        app.logger.exception("Calculator API error")
-        return json_err(str(e), 500)
+        app.logger.exception("Calculator API unexpected error")
+        return json_err("Internal server error", 500)
 
 
 # ----------------------

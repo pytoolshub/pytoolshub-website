@@ -57,22 +57,19 @@
 document.getElementById('calculatorForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const a = parseFloat(document.getElementById('num1').value);
-    const b = parseFloat(document.getElementById('num2').value);
+    const num1 = parseFloat(document.getElementById('num1').value);
+    const num2 = parseFloat(document.getElementById('num2').value);
     const operation = document.getElementById('operation').value;
 
-    // Convert operation name to backend operator
-    let op = "+";
-    if (operation === "add") op = "+";
-    if (operation === "subtract") op = "-";
-    if (operation === "multiply") op = "*";
-    if (operation === "divide") op = "/";
+    // Hide previous results/errors
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
 
     try {
-        const response = await fetch('/api/calc', {
+        const response = await fetch('/api/calculate', { // Fixed endpoint
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ a, b, op })
+            body: JSON.stringify({ num1, num2, operation }) // Fixed keys
         });
 
         const data = await response.json();
@@ -80,16 +77,13 @@ document.getElementById('calculatorForm').addEventListener('submit', async (e) =
         if (data.ok) {
             document.getElementById('resultValue').textContent = data.result;
             document.getElementById('result').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
         } else {
             document.getElementById('errorMessage').textContent = data.error;
             document.getElementById('error').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
         }
     } catch (err) {
         document.getElementById('errorMessage').textContent = 'Error: ' + err.message;
         document.getElementById('error').style.display = 'block';
-        document.getElementById('result').style.display = 'none';
     }
 });
 </script>
