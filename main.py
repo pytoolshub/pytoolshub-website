@@ -160,84 +160,40 @@ def api_calculate():
         app.logger.exception("Calculator API unexpected error")
         return json_err("Internal server error", 500)
 
-
 # ----------------------
-# API: Converter
-# Template posts to /api/convert with { value, category, from_unit, to_unit }
+# API: Unit Converter
+# Frontend sends: { value, from, to }
 # ----------------------
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
     try:
         data = request.get_json(force=True)
+
         value = float(data.get("value", 0))
-        category = (data.get("category") or "length").lower()
-        frm = (data.get("from_unit") or "").lower()
-        to = (data.get("to_unit") or "").lower()
+        frm = (data.get("from") or "").lower()
+        to = (data.get("to") or "").lower()
 
-        # length: base meters
+        # Only LENGTH conversion is used in your HTML
         length = {
-            "meter": 1.0, "m": 1.0,
-            "kilometer": 1000.0, "km": 1000.0,
-            "centimeter": 0.01, "cm": 0.01,
-            "millimeter": 0.001, "mm": 0.001,
-            "mile": 1609.34, "yard": 0.9144, "foot": 0.3048, "inch": 0.0254
-        }
-        # weight: base kg
-        weight = {
-            "kilogram": 1.0, "kg": 1.0,
-            "gram": 0.001, "g": 0.001,
-            "milligram": 0.000001, "mg": 0.000001,
-            "pound": 0.453592, "lb": 0.453592,
-            "ounce": 0.0283495, "oz": 0.0283495
+            "meter": 1.0,
+            "kilometer": 1000.0,
+            "centimeter": 0.01,
+            "millimeter": 0.001
         }
 
-        if category == "length":
-            if frm not in length or to not in length:
-                return json_err("Unsupported length units", 400)
-            meters = value * length[frm]
-            result = meters / length[to]
+        # Validate units
+        if frm not in length or to not in length:
+            return json_err("Unsupported units", 400)
 
-        elif category == "weight":
-            if frm not in weight or to not in weight:
-                return json_err("Unsupported weight units", 400)
-            kgs = value * weight[frm]
-            result = kgs / weight[to]
+        # Convert -> meters -> target unit
+        meters = value * length[frm]
+        result = meters / length[to]
 
-        elif category == "temperature":
-            # handle temperature conversions
-            v = value
-            if frm == to:
-                result = v
-            else:
-                # convert from -> celsius -> to
-                def to_celsius(x, u):
-                    if u in ("celsius", "c"):
-                        return x
-                    if u in ("fahrenheit", "f"):
-                        return (x - 32) * 5.0/9.0
-                    if u in ("kelvin", "k"):
-                        return x - 273.15
-                    raise ValueError("unknown temp unit")
+        return jsonify({"ok": True, "result": result})
 
-                def from_celsius(x, u):
-                    if u in ("celsius", "c"):
-                        return x
-                    if u in ("fahrenheit", "f"):
-                        return (x * 9.0/5.0) + 32
-                    if u in ("kelvin", "k"):
-                        return x + 273.15
-                    raise ValueError("unknown temp unit")
-
-                c = to_celsius(v, frm)
-                result = from_celsius(c, to)
-        else:
-            return json_err("Invalid category", 400)
-
-        return jsonify({"result": result})
     except Exception as e:
-        app.logger.exception("Convert API error")
+        app.logger.exception("Unit Converter API error")
         return json_err(str(e), 500)
-
 
 # ----------------------
 # API: JSON Formatter

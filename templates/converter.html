@@ -68,21 +68,29 @@ document.getElementById('converterForm').addEventListener('submit', async (e) =>
     e.preventDefault();
 
     const value = parseFloat(document.getElementById('value').value);
-    const from = document.getElementById('fromUnit').value;
-    const to = document.getElementById('toUnit').value;
+    const from_unit = document.getElementById('fromUnit').value;
+    const to_unit = document.getElementById('toUnit').value;
+
+    // category = length (for this page)
+    const category = "length";
 
     try {
         const response = await fetch('/api/convert', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ value, from, to })
+            body: JSON.stringify({
+                value,
+                category,
+                from_unit,
+                to_unit
+            })
         });
 
         const data = await response.json();
 
         if (data.ok) {
             document.getElementById('resultValue').textContent =
-                `${value} ${from} = ${data.result.toFixed(4)} ${to}`;
+                `${value} ${from_unit} = ${data.result.toFixed(4)} ${to_unit}`;
 
             document.getElementById('result').style.display = 'block';
             document.getElementById('error').style.display = 'none';
