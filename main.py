@@ -161,7 +161,7 @@ def api_calculate():
         return json_err("Internal server error", 500)
 
 # ----------------------
-API: CONVERTER
+#API: CONVERTER
 # ----------------------
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
