@@ -161,39 +161,130 @@ def api_calculate():
         return json_err("Internal server error", 500)
 
 # ----------------------
-# API: Unit Converter
-# Frontend sends: { value, from, to }
+API: CONVERTER
 # ----------------------
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json(force=True) or {}
 
-        value = float(data.get("value", 0))
-        frm = (data.get("from") or "").lower()
-        to = (data.get("to") or "").lower()
+        # Helper to accept multiple possible keys from frontend
+        def pick(*keys):
+            for k in keys:
+                if k in data and data[k] is not None:
+                    return data[k]
+            return None
 
-        # Only LENGTH conversion is used in your HTML
+        # Get value
+        raw_value = pick("value", "val", "amount")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            return json_err("Invalid or missing 'value' (must be a number)", 400)
+
+        # Accept many forms for unit keys
+        frm_raw = pick("from_unit", "fromUnit", "from", "frm")
+        to_raw = pick("to_unit", "toUnit", "to", "t")
+        category_raw = pick("category", "cat", None)
+
+        frm = (frm_raw or "").strip().lower()
+        to = (to_raw or "").strip().lower()
+        category = (category_raw or "").strip().lower()
+
+        if not frm or not to:
+            return json_err("Missing 'from' or 'to' unit", 400)
+
+        # Unit tables
         length = {
-            "meter": 1.0,
-            "kilometer": 1000.0,
-            "centimeter": 0.01,
-            "millimeter": 0.001
+            "meter": 1.0, "m": 1.0,
+            "kilometer": 1000.0, "km": 1000.0,
+            "centimeter": 0.01, "cm": 0.01,
+            "millimeter": 0.001, "mm": 0.001,
+            "mile": 1609.34, "mi": 1609.34,
+            "yard": 0.9144, "yd": 0.9144,
+            "foot": 0.3048, "ft": 0.3048,
+            "inch": 0.0254, "in": 0.0254
         }
 
-        # Validate units
-        if frm not in length or to not in length:
-            return json_err("Unsupported units", 400)
+        weight = {
+            "kilogram": 1.0, "kg": 1.0,
+            "gram": 0.001, "g": 0.001,
+            "milligram": 0.000001, "mg": 0.000001,
+            "pound": 0.45359237, "lb": 0.45359237,
+            "ounce": 0.028349523125, "oz": 0.028349523125
+        }
 
-        # Convert -> meters -> target unit
-        meters = value * length[frm]
-        result = meters / length[to]
+        temp_units = {"celsius", "c", "fahrenheit", "f", "kelvin", "k"}
 
-        return jsonify({"ok": True, "result": result})
+        # Try to infer category if not provided
+        def infer_category(frm_u, to_u):
+            if frm_u in length or to_u in length:
+                return "length"
+            if frm_u in weight or to_u in weight:
+                return "weight"
+            if frm_u in temp_units or to_u in temp_units:
+                return "temperature"
+            return None
+
+        if not category:
+            category = infer_category(frm, to)
+            if not category:
+                return json_err("Could not infer category. Provide 'category' or use supported units.", 400)
+
+        # Conversion logic
+        if category == "length":
+            if frm not in length or to not in length:
+                return json_err("Unsupported length units", 400)
+            meters = value * length[frm]
+            result = meters / length[to]
+            return jsonify({"ok": True, "result": result})
+
+        elif category == "weight":
+            if frm not in weight or to not in weight:
+                return json_err("Unsupported weight units", 400)
+            kgs = value * weight[frm]
+            result = kgs / weight[to]
+            return jsonify({"ok": True, "result": result})
+
+        elif category == "temperature":
+            # normalize names
+            def norm(u):
+                u = u.lower()
+                if u in ("c", "celsius"): return "c"
+                if u in ("f", "fahrenheit"): return "f"
+                if u in ("k", "kelvin"): return "k"
+                return u
+
+            f = norm(frm)
+            t = norm(to)
+
+            def to_celsius(x, u):
+                if u == "c": return x
+                if u == "f": return (x - 32) * 5.0/9.0
+                if u == "k": return x - 273.15
+                raise ValueError("unknown temp unit")
+
+            def from_celsius(x, u):
+                if u == "c": return x
+                if u == "f": return (x * 9.0/5.0) + 32
+                if u == "k": return x + 273.15
+                raise ValueError("unknown temp unit")
+
+            if f not in ("c","f","k") or t not in ("c","f","k"):
+                return json_err("Unsupported temperature units", 400)
+
+            c = to_celsius(value, f)
+            result = from_celsius(c, t)
+            return jsonify({"ok": True, "result": result})
+
+        else:
+            return json_err("Invalid category", 400)
 
     except Exception as e:
-        app.logger.exception("Unit Converter API error")
-        return json_err(str(e), 500)
+        app.logger.exception("Unit Converter API unexpected error")
+        return json_err("Internal server error", 500)
+
+
 
 # ----------------------
 # API: JSON Formatter
