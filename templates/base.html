@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google Analytics -->
+    <!-- Google tag (gtag.js) - keep your ID -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-DSHL6PHTF5"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -11,84 +11,113 @@
     </script>
 
     <meta charset="UTF-8">
-    <meta name="google-site-verification" content="suXZh_34AaRxnp3ersJIQ0VZ_GmDApJeAa_Ahlr89tc" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>{% block title %}PyToolsHub.in - Python Tools Collection{% endblock %}</title>
 
-    <!-- Bootstrap CSS -->
+    <!-- per-page meta -->
+    {% block meta %}{% endblock %}
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
     {% block extra_css %}{% endblock %}
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
-    </script>
-
 </head>
-
 <body>
+    <button id="theme-toggle" class="theme-btn">
+        🌙
+    </button>
 
-    <!-- Theme Button -->
-    <button id="theme-toggle" class="theme-btn">🌙</button>
-
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-tools"></i> PyToolsHub.in
-            </a>
-
+            <a class="navbar-brand" href="/"><i class="bi bi-tools"></i> PyToolsHub.in</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-
                     <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-
                     <li class="nav-item"><a class="nav-link" href="/calculator">Calculator</a></li>
-
                     <li class="nav-item"><a class="nav-link" href="/converter">Converter</a></li>
-
                     <li class="nav-item"><a class="nav-link" href="/json-formatter">JSON Formatter</a></li>
-
                     <li class="nav-item"><a class="nav-link" href="/text-tools">Text Tools</a></li>
-
+                    <li class="nav-item"><a class="nav-link" href="/qr">QR Code</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+                    
                 </ul>
             </div>
         </div>
     </nav>
 
-    <main class="py-4">
+    <main class="py-4 container">
+        <!-- flash messages -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="my-2">
+              {% for msg in messages %}
+                <div class="alert alert-success" role="alert">{{ msg }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <p class="mb-0">&copy; 2024 PyToolsHub.in - Your Python Tools Collection</p>
+    <!-- Footer -->
+    <footer class="site-footer bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row gy-3">
+                <div class="col-md-4">
+                    <h5>PyToolsHub.in</h5>
+                    <p class="small">Free, fast and easy-to-use Python utility tools — calculators, converters, formatters and more.</p>
+                </div>
+
+                <div class="col-md-3">
+                    <h6>Quick Links</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="/calculator" class="footer-link">Calculator</a></li>
+                        <li><a href="/converter" class="footer-link">Converter</a></li>
+                        <li><a href="/json-formatter" class="footer-link">JSON Formatter</a></li>
+                        <li><a href="/text-tools" class="footer-link">Text Tools</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-md-3">
+                    <h6>Company</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="/about" class="footer-link">About</a></li>
+                        <li><a href="/contact" class="footer-link">Contact</a></li>
+                        <li><a href="/sitemap.xml" class="footer-link">Sitemap</a></li>
+                        <li><a href="/privacy" class="footer-link">Privacy</a></li>
+                        
+                    </ul>
+                </div>
+
+                <div class="col-md-2">
+                    <h6>Follow</h6>
+                    <div>
+                        <a class="footer-social" href="#" aria-label="twitter"><i class="bi bi-twitter"></i></a>
+                        <a class="footer-social" href="#" aria-label="github"><i class="bi bi-github"></i></a>
+                        <a class="footer-social" href="#" aria-label="linkedin"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3 small">
+                &copy; {{now().year}} PyToolsHub.in — All rights reserved.
+            </div>
+        </div>
     </footer>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     {% block extra_js %}{% endblock %}
 
-    <!-- Theme Script -->
     <script>
+        // theme toggle (keeps your current behavior)
         const themeToggle = document.getElementById("theme-toggle");
-
-        // Load saved theme
         if (localStorage.getItem("theme") === "dark") {
             document.body.classList.add("dark");
             themeToggle.textContent = "☀️";
@@ -96,7 +125,6 @@
 
         themeToggle.addEventListener("click", () => {
             document.body.classList.toggle("dark");
-
             if (document.body.classList.contains("dark")) {
                 themeToggle.textContent = "☀️";
                 localStorage.setItem("theme", "dark");
@@ -106,6 +134,5 @@
             }
         });
     </script>
-
 </body>
 </html>

@@ -121,3 +121,19 @@ body.dark .container, body.dark .box {
     border: none;
     cursor: pointer;
 }
+
+/* Footer styles */
+.site-footer { font-size: 14px; }
+.site-footer .footer-link { color: #ddd; text-decoration: none; }
+.site-footer .footer-link:hover { color: #fff; text-decoration: underline; }
+.site-footer .footer-social { margin-right: 8px; color: #ddd; font-size: 1.1rem; }
+.site-footer .footer-social:hover { color: #fff; }
+
+/* theme: dark mode body.dark rules (if you use 'dark' class) */
+body.dark {
+    background: #0f1724;
+    color: #e6eef8;
+}
+body.dark .card { background: #0b1220; color: #e6eef8; border-color: rgba(255,255,255,0.04); }
+body.dark .site-footer { background: #07101c; color: #c9d7ea; }
+

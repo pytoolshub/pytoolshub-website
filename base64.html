@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Base64 Encoder & Decoder – Free Online Tool | PyToolsHub{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Use the free Base64 Encoder & Decoder tool on PyToolsHub to convert text to Base64 and decode Base64 strings instantly. Fast, accurate, and secure online Base64 utility.">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0"><i class="bi bi-code-square"></i> Base64 Encoder / Decoder</h4>
+                </div>
+
+                <div class="card-body">
+                    <form id="base64Form">
+                        <div class="mb-3">
+                            <label class="form-label">Enter Text</label>
+                            <textarea id="inputText" class="form-control" rows="4" placeholder="Enter your text or Base64 string" required></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" id="encodeBtn" class="btn btn-primary w-50">Encode</button>
+                            <button type="button" id="decodeBtn" class="btn btn-warning w-50">Decode</button>
+                        </div>
+                    </form>
+
+                    <!-- Output -->
+                    <div class="mt-4" id="outputSection" style="display:none;">
+                        <label class="form-label fw-bold">Result:</label>
+                        <textarea id="outputText" class="form-control" rows="4" readonly></textarea>
+
+                        <button class="btn btn-success mt-2 w-100" id="copyBtn">
+                            Copy to Clipboard
+                        </button>
+                    </div>
+
+                    <!-- Error -->
+                    <div class="mt-4" id="errorSection" style="display: none;">
+                        <div class="alert alert-danger" id="errorMessage"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showError(msg) {
+    document.getElementById("errorMessage").textContent = msg;
+    document.getElementById("errorSection").style.display = "block";
+    document.getElementById("outputSection").style.display = "none";
+}
+
+function showOutput(result) {
+    document.getElementById("outputText").value = result;
+    document.getElementById("outputSection").style.display = "block";
+    document.getElementById("errorSection").style.display = "none";
+}
+
+async function handleRequest(mode) {
+    const text = document.getElementById("inputText").value.trim();
+    if (!text) return showError("Input cannot be empty.");
+
+    const endpoint = mode === "encode" ? "/api/base64/encode" : "/api/base64/decode";
+
+    try {
+        const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            showOutput(data.result);
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        showError("Error: " + error.message);
+    }
+}
+
+// Encode
+document.getElementById("encodeBtn").addEventListener("click", () => handleRequest("encode"));
+// Decode
+document.getElementById("decodeBtn").addEventListener("click", () => handleRequest("decode"));
+// Copy to clipboard
+document.getElementById("copyBtn").addEventListener("click", () => {
+    const output = document.getElementById("outputText").value;
+    navigator.clipboard.writeText(output);
+    alert("Copied!");
+});
+</script>
+{% endblock %}

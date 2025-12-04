@@ -1,54 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}JSON Formatter - PyToolsHub.in{% endblock %}
+{% block title %}
+JSON Formatter & Validator - Beautify, Minify & Validate JSON Online | PyToolsHub
+{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Free JSON Formatter & Validator tool to beautify, minify, validate and fix JSON instantly. Fast, accurate and developer-friendly JSON tool on PyToolsHub.">
+{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row">
-        <div class="col-12">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
             <div class="card shadow">
-                <div class="card-header bg-warning">
+                <div class="card-header bg-info text-white">
                     <h4 class="mb-0"><i class="bi bi-braces"></i> JSON Formatter & Validator</h4>
                 </div>
+
                 <div class="card-body">
-                    <form id="jsonForm">
-                        <div class="mb-3">
-                            <label for="jsonInput" class="form-label">Paste your JSON here:</label>
-                            <textarea class="form-control font-monospace" id="jsonInput" rows="10" 
-                                placeholder='{"name": "John", "age": 30}' required></textarea>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="indent" class="form-label">Indentation</label>
-                                <select class="form-select" id="indent">
-                                    <option value="2" selected>2 spaces</option>
-                                    <option value="4">4 spaces</option>
-                                    <option value="8">8 spaces</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-warning">Format & Validate</button>
-                        <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
-                    </form>
-                    <div id="result" class="mt-4" style="display: none;">
-                        <div class="alert alert-success">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="mb-0">Formatted JSON:</h5>
-                                <button class="btn btn-sm btn-primary" id="copyBtn">
-                                    <i class="bi bi-clipboard"></i> Copy
-                                </button>
-                            </div>
-                        </div>
-                        <pre class="bg-light p-3 rounded"><code id="formattedJson" class="language-json"></code></pre>
+
+                    <label class="form-label">Enter JSON</label>
+                    <textarea id="jsonInput" class="form-control" rows="10" placeholder="Paste your JSON here..."></textarea>
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-primary w-100" onclick="formatJSON()">Beautify</button>
+                        <button class="btn btn-warning w-100" onclick="minifyJSON()">Minify</button>
+                        <button class="btn btn-success w-100" onclick="validateJSON()">Validate</button>
+                        <button class="btn btn-secondary w-100" onclick="copyJSON()">Copy</button>
                     </div>
-                    <div id="error" class="mt-4" style="display: none;">
-                        <div class="alert alert-danger">
-                            <h5>Invalid JSON:</h5>
-                            <p id="errorMessage" class="mb-0"></p>
+
+                    <div id="jsonOutputContainer" class="mt-4" style="display:none;">
+                        <div class="alert alert-primary">
+                            <h5>Output:</h5>
+                            <pre id="jsonOutput" class="bg-dark text-white p-3 rounded"></pre>
                         </div>
                     </div>
+
+                    <div id="jsonError" class="alert alert-danger mt-3" style="display:none;"></div>
+
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -56,55 +49,52 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('jsonForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const jsonString = document.getElementById('jsonInput').value;
-    const indent = parseInt(document.getElementById('indent').value);
-    
+function showOutput(text) {
+    document.getElementById("jsonOutput").textContent = text;
+    document.getElementById("jsonOutputContainer").style.display = "block";
+    document.getElementById("jsonError").style.display = "none";
+}
+
+function showError(error) {
+    document.getElementById("jsonError").textContent = error;
+    document.getElementById("jsonError").style.display = "block";
+    document.getElementById("jsonOutputContainer").style.display = "none";
+}
+
+function formatJSON() {
     try {
-        const response = await fetch('/api/format-json', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ json_string: jsonString, indent })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            document.getElementById('formattedJson').textContent = data.formatted;
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-        } else {
-            document.getElementById('errorMessage').textContent = data.error;
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
-        }
-    } catch (error) {
-        document.getElementById('errorMessage').textContent = 'An error occurred: ' + error.message;
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('result').style.display = 'none';
+        const input = document.getElementById("jsonInput").value;
+        const formatted = JSON.stringify(JSON.parse(input), null, 4);
+        showOutput(formatted);
+    } catch (err) {
+        showError("Invalid JSON: " + err.message);
     }
-});
+}
 
-document.getElementById('clearBtn').addEventListener('click', () => {
-    document.getElementById('jsonInput').value = '';
-    document.getElementById('result').style.display = 'none';
-    document.getElementById('error').style.display = 'none';
-});
+function minifyJSON() {
+    try {
+        const input = document.getElementById("jsonInput").value;
+        const minified = JSON.stringify(JSON.parse(input));
+        showOutput(minified);
+    } catch (err) {
+        showError("Invalid JSON: " + err.message);
+    }
+}
 
-document.getElementById('copyBtn').addEventListener('click', () => {
-    const text = document.getElementById('formattedJson').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-        const btn = document.getElementById('copyBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-        }, 2000);
-    });
-});
+function validateJSON() {
+    try {
+        const input = document.getElementById("jsonInput").value;
+        JSON.parse(input);
+        showOutput("JSON is valid ✔️");
+    } catch (err) {
+        showError("Invalid JSON ❌: " + err.message);
+    }
+}
+
+function copyJSON() {
+    const output = document.getElementById("jsonOutput").textContent;
+    navigator.clipboard.writeText(output);
+    alert("Copied!");
+}
 </script>
 {% endblock %}

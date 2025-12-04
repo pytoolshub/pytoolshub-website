@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Calculator - PyToolsHub.in{% endblock %}
+{% block title %}Online Calculator - Fast & Simple Calculator | PyToolsHub{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Use the free Online Calculator on PyToolsHub to perform addition, subtraction, multiplication, and division instantly. Fast, accurate & mobile-friendly calculator tool.">
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -61,15 +65,14 @@ document.getElementById('calculatorForm').addEventListener('submit', async (e) =
     const num2 = parseFloat(document.getElementById('num2').value);
     const operation = document.getElementById('operation').value;
 
-    // Hide previous results/errors
     document.getElementById('result').style.display = 'none';
     document.getElementById('error').style.display = 'none';
 
     try {
-        const response = await fetch('/api/calculate', { // Fixed endpoint
+        const response = await fetch('/api/calculate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ num1, num2, operation }) // Fixed keys
+            body: JSON.stringify({ num1, num2, operation })
         });
 
         const data = await response.json();

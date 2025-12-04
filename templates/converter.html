@@ -1,62 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Unit Converter - PyToolsHub.in{% endblock %}
+{% block title %}Unit Converter - Convert Length, Weight, Temperature & More | PyToolsHub{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Free Unit Converter tool to instantly convert length, weight, temperature, volume, area, speed, time, and more. Fast, accurate & mobile-friendly converter on PyToolsHub.">
+{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-6">
+
             <div class="card shadow">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="bi bi-arrows-angle-expand"></i> Unit Converter</h4>
+                    <h4 class="mb-0"><i class="bi bi-arrow-left-right"></i> Unit Converter</h4>
                 </div>
 
                 <div class="card-body">
                     <form id="converterForm">
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Value</label>
-                                <input type="number" class="form-control" id="value" step="any" required>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">From</label>
-                                <select class="form-select" id="fromUnit" required>
-                                    <option value="meter">Meter</option>
-                                    <option value="kilometer">Kilometer</option>
-                                    <option value="centimeter">Centimeter</option>
-                                    <option value="millimeter">Millimeter</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <div class="mb-3">
-                            <label class="form-label">To</label>
-                            <select class="form-select" id="toUnit" required>
-                                <option value="kilometer">Kilometer</option>
-                                <option value="meter">Meter</option>
-                                <option value="centimeter">Centimeter</option>
-                                <option value="millimeter">Millimeter</option>
+                            <label class="form-label">Category</label>
+                            <select id="category" class="form-select" required>
+                                <option value="length">Length</option>
+                                <option value="weight">Weight</option>
+                                <option value="temperature">Temperature</option>
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100">Convert</button>
+                        <div class="mb-3">
+                            <label class="form-label">From Unit</label>
+                            <select id="fromUnit" class="form-select"></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">To Unit</label>
+                            <select id="toUnit" class="form-select"></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Value</label>
+                            <input type="number" id="value" class="form-control" step="any" required>
+                        </div>
+
+                        <button class="btn btn-success w-100">Convert</button>
                     </form>
 
-                    <div id="result" class="mt-4" style="display: none;">
-                        <div class="alert alert-success">
-                            <h5>Result:</h5>
-                            <h3 id="resultValue"></h3>
-                        </div>
-                    </div>
-
-                    <div id="error" class="mt-4" style="display: none;">
-                        <div class="alert alert-danger" id="errorMessage"></div>
+                    <div id="convertResult" class="alert alert-primary mt-3" style="display:none;">
+                        <h5>Converted Value:</h5>
+                        <h3 id="convertedValue"></h3>
                     </div>
 
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -64,46 +61,48 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('converterForm').addEventListener('submit', async (e) => {
+const units = {
+    length: ["meter", "kilometer", "centimeter", "mile"],
+    weight: ["gram", "kilogram", "pound"],
+    temperature: ["celsius", "fahrenheit", "kelvin"]
+};
+
+function loadUnits() {
+    const type = document.getElementById("category").value;
+    const from = document.getElementById("fromUnit");
+    const to = document.getElementById("toUnit");
+
+    from.innerHTML = "";
+    to.innerHTML = "";
+
+    units[type].forEach(u => {
+        from.innerHTML += `<option value="${u}">${u}</option>`;
+        to.innerHTML += `<option value="${u}">${u}</option>`;
+    });
+}
+
+document.getElementById("category").addEventListener("change", loadUnits);
+loadUnits();
+
+document.getElementById("converterForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const value = parseFloat(document.getElementById('value').value);
-    const from_unit = document.getElementById('fromUnit').value;
-    const to_unit = document.getElementById('toUnit').value;
+    const category = document.getElementById("category").value;
+    const fromUnit = document.getElementById("fromUnit").value;
+    const toUnit = document.getElementById("toUnit").value;
+    const value = parseFloat(document.getElementById("value").value);
 
-    // category = length (for this page)
-    const category = "length";
+    const response = await fetch("/api/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, fromUnit, toUnit, value })
+    });
 
-    try {
-        const response = await fetch('/api/convert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                value,
-                category,
-                from_unit,
-                to_unit
-            })
-        });
+    const data = await response.json();
 
-        const data = await response.json();
-
-        if (data.ok) {
-            document.getElementById('resultValue').textContent =
-                `${value} ${from_unit} = ${data.result.toFixed(4)} ${to_unit}`;
-
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-        } else {
-            document.getElementById('errorMessage').textContent = data.error;
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
-        }
-
-    } catch (err) {
-        document.getElementById('errorMessage').textContent = 'Error: ' + err.message;
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('result').style.display = 'none';
+    if (data.ok) {
+        document.getElementById("convertedValue").textContent = data.result;
+        document.getElementById("convertResult").style.display = "block";
     }
 });
 </script>

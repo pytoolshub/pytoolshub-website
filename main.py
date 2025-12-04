@@ -1,11 +1,82 @@
 # main.py
 from flask import Flask, render_template, request, jsonify, send_from_directory
+import os
 import json
 import qrcode
 import base64
 from io import BytesIO
 from datetime import datetime
 import logging
+from flask import flash, redirect, url_for
+
+# ensure data dir exists (run-once at startup)
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
+
+# helper to append contact
+def save_contact_record(record):
+    try:
+        # read existing
+        if os.path.exists(CONTACTS_FILE):
+            with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+                items = json.load(f)
+        else:
+            items = []
+    except Exception:
+        items = []
+
+    items.append(record)
+    with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+
+# About page route
+@app.route("/about")
+def about_page():
+    # pass current_year if base.html uses it
+    return render_template("about.html", current_year=datetime.now().year)
+
+# Contact page route (GET + POST)
+@app.route("/contact", methods=["GET", "POST"])
+def contact_page():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        subject = request.form.get("subject", "").strip()
+        message = request.form.get("message", "").strip()
+
+        if not name or not email or not message:
+            # minimal validation
+            flash("Please fill all required fields.")
+            return redirect(url_for("contact_page"))
+
+        record = {
+            "name": name,
+            "email": email,
+            "subject": subject,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+
+        # Save locally
+        save_contact_record(record)
+
+        # Optional: send email here (commented) - configure SMTP/env in production
+        # try:
+        #     send_email_to_admin(subject, f"{name} <{email}>: {message}")
+        # except Exception:
+        #     app.logger.exception("Failed to send email")
+
+        flash("Thank you — your message was received. We'll get back to you soon.")
+        return redirect(url_for("contact_page"))
+
+    # GET
+    return render_template("contact.html")
+
+
+@app.route("/privacy")
+def privacy_page():
+    return render_template("privacy.html")
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +91,11 @@ def json_ok(result):
 
 def json_err(msg, status=400):
     return jsonify({"ok": False, "error": msg}), status
+
+
+@app.route("/base64")
+def base64_tool():
+    return render_template("base64.html")
 
 
 @app.route('/sitemap.xml')
