@@ -22,6 +22,16 @@ def json_err(msg, status=400):
     return jsonify({"ok": False, "error": msg}), status
 
 
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory('.', 'sitemap.xml')
+
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory('.', 'robots.txt')
+
+
 # ----------------------
 # Pages (render templates you provided)
 # ----------------------
