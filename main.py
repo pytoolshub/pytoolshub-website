@@ -1,8 +1,5 @@
 # main.py
-from flask import (
-    Flask, render_template, request, jsonify, send_from_directory,
-    flash, redirect, url_for
-)
+from flask import Flask, render_template, request, jsonify, send_from_directory, flash, redirect, url_for
 import os
 import json
 import qrcode
@@ -11,28 +8,28 @@ from io import BytesIO
 from datetime import datetime
 import logging
 
-# ------------------------
-# App initialization (MUST be first)
-# ------------------------
+# --------------------------------------------------
+# Create Flask App FIRST (IMPORTANT)
+# --------------------------------------------------
 app = Flask(__name__)
-# set secret_key (use env var in production)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-
-# Logging
+app.secret_key = "supersecretkey"  # Required for flash()
 logging.basicConfig(level=logging.DEBUG)
 
-# inject current year into templates (footer)
+# --------------------------------------------------
+# Inject current year globally
+# --------------------------------------------------
 @app.context_processor
 def inject_year():
     return {"current_year": datetime.now().year}
 
 
-# ------------------------
-# Data dir for storing contacts (create once)
-# ------------------------
+# --------------------------------------------------
+# CONTACT FORM STORAGE
+# --------------------------------------------------
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
+
 
 def save_contact_record(record):
     try:
@@ -41,7 +38,7 @@ def save_contact_record(record):
                 items = json.load(f)
         else:
             items = []
-    except Exception:
+    except:
         items = []
 
     items.append(record)
@@ -49,20 +46,9 @@ def save_contact_record(record):
         json.dump(items, f, ensure_ascii=False, indent=2)
 
 
-# ------------------------
-# Small JSON helpers
-# ------------------------
-def json_ok(result):
-    return jsonify({"ok": True, "result": result})
-
-
-def json_err(msg, status=400):
-    return jsonify({"ok": False, "error": msg}), status
-
-
-# ------------------------
-# Static pages: About / Contact / Privacy
-# ------------------------
+# --------------------------------------------------
+# STATIC PAGES
+# --------------------------------------------------
 @app.route("/about")
 def about_page():
     return render_template("about.html")
@@ -89,7 +75,7 @@ def contact_page():
         }
 
         save_contact_record(record)
-        flash("Thank you — your message was received. We'll get back to you soon.")
+        flash("Thank you — your message was received!")
         return redirect(url_for("contact_page"))
 
     return render_template("contact.html")
@@ -100,28 +86,9 @@ def privacy_page():
     return render_template("privacy.html")
 
 
-# ------------------------
-# Utility routes (sitemap/robots/base64 page)
-# ------------------------
-@app.route("/base64")
-def base64_tool():
-    return render_template("base64.html")
-
-
-# serve sitemap/robots from project root (app.root_path)
-@app.route('/sitemap.xml')
-def sitemap():
-    return send_from_directory(app.root_path, 'sitemap.xml')
-
-
-@app.route('/robots.txt')
-def robots():
-    return send_from_directory(app.root_path, 'robots.txt')
-
-
-# ------------------------
-# Main tool pages
-# ------------------------
+# --------------------------------------------------
+# BASIC ROUTES
+# --------------------------------------------------
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -154,13 +121,10 @@ def bmi_page():
         try:
             weight = float(request.form.get("weight", 0))
             height_cm = float(request.form.get("height", 0))
-            height_m = height_cm / 100.0 if height_cm else 0
-            if height_m <= 0:
-                bmi_result = None
-            else:
-                bmi_result = round(weight / (height_m * height_m), 2)
-        except Exception:
-            app.logger.exception("BMI error")
+            height_m = height_cm / 100
+            if height_m > 0:
+                bmi_result = round(weight / (height_m**2), 2)
+        except:
             bmi_result = None
     return render_template("bmi.html", bmi=bmi_result)
 
@@ -174,7 +138,7 @@ def password_page():
 def qr_page():
     qr_image = None
     if request.method == "POST":
-        text = request.form.get("data", "")
+        text = request.form.get("data")
         if text:
             img = qrcode.make(text)
             buf = BytesIO()
@@ -192,273 +156,105 @@ def age_page():
         try:
             dob_dt = datetime.strptime(dob, "%Y-%m-%d")
             today = datetime.today()
+
             years = today.year - dob_dt.year
             months = today.month - dob_dt.month
             days = today.day - dob_dt.day
+
             if days < 0:
                 months -= 1
                 days += 30
             if months < 0:
                 years -= 1
                 months += 12
+
             result = {"years": years, "months": months, "days": days}
-        except Exception:
-            app.logger.exception("Age calculation error")
+        except:
             result = None
+
     return render_template("age.html", age=result)
 
 
-# serve favicon if present
+# --------------------------------------------------
+# FAVICON
+# --------------------------------------------------
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
 
 
-# ------------------------
-# API: Calculator
-# expects JSON { num1, num2, operation }
-# ------------------------
+# --------------------------------------------------
+# SITEMAP + ROBOTS
+# --------------------------------------------------
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory('.', 'sitemap.xml')
+
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory('.', 'robots.txt')
+
+
+# --------------------------------------------------
+# API ENDPOINTS (Calculator, Converter, JSON, Text)
+# --------------------------------------------------
 @app.route("/api/calculate", methods=["POST"])
 def api_calculate():
     try:
-        data = request.get_json(force=True) or {}
+        data = request.get_json(force=True)
 
-        try:
-            num1 = float(data.get("num1", 0))
-        except (TypeError, ValueError):
-            return json_err("Invalid input for num1", 400)
-
-        try:
-            num2 = float(data.get("num2", 0))
-        except (TypeError, ValueError):
-            return json_err("Invalid input for num2", 400)
-
-        op = (data.get("operation") or "").strip().lower()
-        if not op:
-            return json_err("Operation not specified", 400)
+        num1 = float(data.get("num1"))
+        num2 = float(data.get("num2"))
+        op = data.get("operation", "").lower()
 
         if op in ("add", "+"):
             result = num1 + num2
         elif op in ("subtract", "-"):
             result = num1 - num2
-        elif op in ("multiply", "*", "times"):
+        elif op in ("multiply", "*"):
             result = num1 * num2
         elif op in ("divide", "/"):
             if num2 == 0:
-                return json_err("Division by zero is not allowed", 400)
+                return json_err("Division by zero not allowed")
             result = num1 / num2
         else:
-            return json_err(f"Invalid operation: {op}", 400)
+            return json_err("Invalid operation")
 
-        return jsonify({"ok": True, "result": result})
+        return json_ok(result)
 
-    except Exception:
-        app.logger.exception("Calculator API unexpected error")
-        return json_err("Internal server error", 500)
-
-
-# ------------------------
-# API: Converter
-# ------------------------
-@app.route("/api/convert", methods=["POST"])
-def api_convert():
-    try:
-        data = request.get_json(force=True) or {}
-
-        def pick(*keys):
-            for k in keys:
-                if k in data and data[k] is not None:
-                    return data[k]
-            return None
-
-        raw_value = pick("value", "val", "amount")
-        try:
-            value = float(raw_value)
-        except (TypeError, ValueError):
-            return json_err("Invalid or missing 'value' (must be a number)", 400)
-
-        frm_raw = pick("from_unit", "fromUnit", "from", "frm")
-        to_raw = pick("to_unit", "toUnit", "to", "t")
-        category_raw = pick("category", "cat", None)
-
-        frm = (frm_raw or "").strip().lower()
-        to = (to_raw or "").strip().lower()
-        category = (category_raw or "").strip().lower()
-
-        if not frm or not to:
-            return json_err("Missing 'from' or 'to' unit", 400)
-
-        length = {
-            "meter": 1.0, "m": 1.0,
-            "kilometer": 1000.0, "km": 1000.0,
-            "centimeter": 0.01, "cm": 0.01,
-            "millimeter": 0.001, "mm": 0.001,
-            "mile": 1609.34, "mi": 1609.34,
-            "yard": 0.9144, "yd": 0.9144,
-            "foot": 0.3048, "ft": 0.3048,
-            "inch": 0.0254, "in": 0.0254
-        }
-
-        weight = {
-            "kilogram": 1.0, "kg": 1.0,
-            "gram": 0.001, "g": 0.001,
-            "milligram": 0.000001, "mg": 0.000001,
-            "pound": 0.45359237, "lb": 0.45359237,
-            "ounce": 0.028349523125, "oz": 0.028349523125
-        }
-
-        temp_units = {"celsius", "c", "fahrenheit", "f", "kelvin", "k"}
-
-        def infer_category(frm_u, to_u):
-            if frm_u in length or to_u in length:
-                return "length"
-            if frm_u in weight or to_u in weight:
-                return "weight"
-            if frm_u in temp_units or to_u in temp_units:
-                return "temperature"
-            return None
-
-        if not category:
-            category = infer_category(frm, to)
-            if not category:
-                return json_err("Could not infer category. Provide 'category' or use supported units.", 400)
-
-        if category == "length":
-            if frm not in length or to not in length:
-                return json_err("Unsupported length units", 400)
-            meters = value * length[frm]
-            result = meters / length[to]
-            return jsonify({"ok": True, "result": result})
-
-        elif category == "weight":
-            if frm not in weight or to not in weight:
-                return json_err("Unsupported weight units", 400)
-            kgs = value * weight[frm]
-            result = kgs / weight[to]
-            return jsonify({"ok": True, "result": result})
-
-        elif category == "temperature":
-            def norm(u):
-                u = u.lower()
-                if u in ("c", "celsius"): return "c"
-                if u in ("f", "fahrenheit"): return "f"
-                if u in ("k", "kelvin"): return "k"
-                return u
-
-            f = norm(frm)
-            t = norm(to)
-
-            def to_celsius(x, u):
-                if u == "c": return x
-                if u == "f": return (x - 32) * 5.0/9.0
-                if u == "k": return x - 273.15
-                raise ValueError("unknown temp unit")
-
-            def from_celsius(x, u):
-                if u == "c": return x
-                if u == "f": return (x * 9.0/5.0) + 32
-                if u == "k": return x + 273.15
-                raise ValueError("unknown temp unit")
-
-            if f not in ("c","f","k") or t not in ("c","f","k"):
-                return json_err("Unsupported temperature units", 400)
-
-            c = to_celsius(value, f)
-            result = from_celsius(c, t)
-            return jsonify({"ok": True, "result": result})
-
-        else:
-            return json_err("Invalid category", 400)
-
-    except Exception:
-        app.logger.exception("Unit Converter API unexpected error")
-        return json_err("Internal server error", 500)
+    except:
+        return json_err("Invalid input", 400)
 
 
-# ------------------------
-# API: JSON formatter
-# ------------------------
-@app.route("/api/format-json", methods=["POST"])
-def api_format_json():
-    try:
-        data = request.get_json(force=True)
-        json_string = data.get("json_string", "")
-        indent = int(data.get("indent", 2))
-        parsed = json.loads(json_string)
-        pretty = json.dumps(parsed, indent=indent, ensure_ascii=False)
-        return jsonify({"formatted": pretty})
-    except json.JSONDecodeError as e:
-        app.logger.exception("JSON parse error")
-        return json_err(f"JSON parse error: {str(e)}", 400)
-    except Exception:
-        app.logger.exception("JSON formatter error")
-        return json_err("Internal server error", 500)
+# JSON OK + Error Helpers
+def json_ok(result):
+    return jsonify({"ok": True, "result": result})
 
 
-# ------------------------
-# API: Text tools
-# ------------------------
-@app.route("/api/text-process", methods=["POST"])
-def api_text_process():
-    try:
-        data = request.get_json(force=True)
-        text = data.get("text", "") or ""
-        op = (data.get("operation") or "").lower()
-
-        if op == "uppercase":
-            return jsonify({"result": text.upper()})
-        if op == "lowercase":
-            return jsonify({"result": text.lower()})
-        if op == "titlecase":
-            return jsonify({"result": text.title()})
-        if op == "reverse":
-            return jsonify({"result": text[::-1]})
-        if op == "trim":
-            return jsonify({"result": text.strip()})
-        if op == "remove_extra_spaces":
-            import re
-            res = re.sub(r'\s+', ' ', text).strip()
-            return jsonify({"result": res})
-        if op == "count":
-            words = len([w for w in text.split() if w])
-            chars = len(text)
-            chars_no_space = len(text.replace(" ", ""))
-            lines = text.count("\n") + 1 if text else 0
-            stats = {
-                "words": words,
-                "characters": chars,
-                "characters_no_space": chars_no_space,
-                "lines": lines
-            }
-            return jsonify({"result": text, "stats": stats})
-
-        return json_err("Invalid operation", 400)
-
-    except Exception:
-        app.logger.exception("Text tools error")
-        return json_err("Internal server error", 500)
+def json_err(msg, status=400):
+    return jsonify({"ok": False, "error": msg}), status
 
 
-# ------------------------
-# Error handlers
-# ------------------------
+# --------------------------------------------------
+# Error Pages
+# --------------------------------------------------
 @app.errorhandler(404)
 def page_not_found(e):
-    if request.path.startswith("/api/"):
+    if request.path.startswith("/api"):
         return json_err("Not found", 404)
     return render_template("404.html"), 404
 
 
 @app.errorhandler(500)
 def server_error(e):
-    app.logger.exception("Unhandled server error")
-    if request.path.startswith("/api/"):
-        return json_err("Internal server error", 500)
+    if request.path.startswith("/api"):
+        return json_err("Server error", 500)
     return render_template("500.html"), 500
 
 
-# ------------------------
-# Run
-# ------------------------
+# --------------------------------------------------
+# RUN APP
+# --------------------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=81, debug=True)
