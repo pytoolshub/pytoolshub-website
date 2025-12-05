@@ -1,4 +1,5 @@
 # main.py
+
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory, flash, redirect, url_for
 import json
@@ -9,6 +10,13 @@ from datetime import datetime
 import logging
 
 app = Flask(__name__)
+
+@app.route('/static/<path:filename>')
+def staticfiles(filename):
+    return send_from_directory('static', filename)
+
+
+
 app.secret_key = "supersecret"  # required for flash messages
 logging.basicConfig(level=logging.DEBUG)
 
