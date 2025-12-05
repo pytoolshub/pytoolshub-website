@@ -1,9 +1,68 @@
 {% extends "base.html" %}
+
 {% block title %}Privacy Policy - PyToolsHub.in{% endblock %}
 
+{% block meta %}
+<meta name="description" content="Read the official Privacy Policy of PyToolsHub.in to understand how we collect, use, and protect your information.">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Privacy Policy</h2>
-    <p>We do not collect any personal data...</p>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="mb-0">Privacy Policy</h3>
+                </div>
+                <div class="card-body">
+
+                    <p class="text-muted">Last updated: {{ current_year }}</p>
+
+                    <h4>1. Overview</h4>
+                    <p>
+                        PyToolsHub.in respects your privacy. We do not collect unnecessary personal data nor share it with third parties.
+                    </p>
+
+                    <h4>2. Information We Collect</h4>
+                    <ul>
+                        <li><strong>Contact Form:</strong> Name, Email, Subject & Message.</li>
+                        <li><strong>No login required.</strong></li>
+                        <li><strong>No tracking of personal information.</strong></li>
+                    </ul>
+
+                    <h4>3. How We Use Your Data</h4>
+                    <p>Your submitted information is used only to:</p>
+                    <ul>
+                        <li>Respond to your messages</li>
+                        <li>Improve our tools and website</li>
+                    </ul>
+
+                    <h4>4. Data Security</h4>
+                    <p>
+                        We store contact messages securely and do not share or sell any data.
+                    </p>
+
+                    <h4>5. Third-Party Services</h4>
+                    <p>
+                        We use Google Analytics and Search Console for performance monitoring only — no personal information is tracked.
+                    </p>
+
+                    <h4>6. Cookies</h4>
+                    <p>
+                        We use minimal cookies only for improving website functionality (like theme mode).
+                    </p>
+
+                    <h4>7. Changes to This Policy</h4>
+                    <p>
+                        We may update this policy occasionally. Continued use of the website means acceptance.
+                    </p>
+
+                    <h4>8. Contact Us</h4>
+                    <p>If you have questions, please contact us via our Contact page.</p>
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

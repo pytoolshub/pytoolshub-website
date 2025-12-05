@@ -1,5 +1,8 @@
 # main.py
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import (
+    Flask, render_template, request, jsonify, send_from_directory,
+    flash, redirect, url_for
+)
 import os
 import json
 import qrcode
@@ -7,17 +10,32 @@ import base64
 from io import BytesIO
 from datetime import datetime
 import logging
-from flask import flash, redirect, url_for
 
-# ensure data dir exists (run-once at startup)
+# ------------------------
+# App initialization (MUST be first)
+# ------------------------
+app = Flask(__name__)
+# set secret_key (use env var in production)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+# Logging
+logging.basicConfig(level=logging.DEBUG)
+
+# inject current year into templates (footer)
+@app.context_processor
+def inject_year():
+    return {"current_year": datetime.now().year}
+
+
+# ------------------------
+# Data dir for storing contacts (create once)
+# ------------------------
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
 
-# helper to append contact
 def save_contact_record(record):
     try:
-        # read existing
         if os.path.exists(CONTACTS_FILE):
             with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
                 items = json.load(f)
@@ -30,13 +48,26 @@ def save_contact_record(record):
     with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
 
-# About page route
+
+# ------------------------
+# Small JSON helpers
+# ------------------------
+def json_ok(result):
+    return jsonify({"ok": True, "result": result})
+
+
+def json_err(msg, status=400):
+    return jsonify({"ok": False, "error": msg}), status
+
+
+# ------------------------
+# Static pages: About / Contact / Privacy
+# ------------------------
 @app.route("/about")
 def about_page():
-    # pass current_year if base.html uses it
-    return render_template("about.html", current_year=datetime.now().year)
+    return render_template("about.html")
 
-# Contact page route (GET + POST)
+
 @app.route("/contact", methods=["GET", "POST"])
 def contact_page():
     if request.method == "POST":
@@ -46,7 +77,6 @@ def contact_page():
         message = request.form.get("message", "").strip()
 
         if not name or not email or not message:
-            # minimal validation
             flash("Please fill all required fields.")
             return redirect(url_for("contact_page"))
 
@@ -58,19 +88,10 @@ def contact_page():
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
 
-        # Save locally
         save_contact_record(record)
-
-        # Optional: send email here (commented) - configure SMTP/env in production
-        # try:
-        #     send_email_to_admin(subject, f"{name} <{email}>: {message}")
-        # except Exception:
-        #     app.logger.exception("Failed to send email")
-
         flash("Thank you — your message was received. We'll get back to you soon.")
         return redirect(url_for("contact_page"))
 
-    # GET
     return render_template("contact.html")
 
 
@@ -78,39 +99,29 @@ def contact_page():
 def privacy_page():
     return render_template("privacy.html")
 
-app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
-
-# ----------------------
-# Helper responders
-# ----------------------
-def json_ok(result):
-    return jsonify({"ok": True, "result": result})
-
-
-def json_err(msg, status=400):
-    return jsonify({"ok": False, "error": msg}), status
-
-
+# ------------------------
+# Utility routes (sitemap/robots/base64 page)
+# ------------------------
 @app.route("/base64")
 def base64_tool():
     return render_template("base64.html")
 
 
+# serve sitemap/robots from project root (app.root_path)
 @app.route('/sitemap.xml')
 def sitemap():
-    return send_from_directory('.', 'sitemap.xml')
+    return send_from_directory(app.root_path, 'sitemap.xml')
 
 
 @app.route('/robots.txt')
 def robots():
-    return send_from_directory('.', 'robots.txt')
+    return send_from_directory(app.root_path, 'robots.txt')
 
 
-# ----------------------
-# Pages (render templates you provided)
-# ----------------------
+# ------------------------
+# Main tool pages
+# ------------------------
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -148,7 +159,7 @@ def bmi_page():
                 bmi_result = None
             else:
                 bmi_result = round(weight / (height_m * height_m), 2)
-        except Exception as e:
+        except Exception:
             app.logger.exception("BMI error")
             bmi_result = None
     return render_template("bmi.html", bmi=bmi_result)
@@ -203,29 +214,29 @@ def favicon():
     return send_from_directory('static', 'favicon.ico')
 
 
+# ------------------------
+# API: Calculator
+# expects JSON { num1, num2, operation }
+# ------------------------
 @app.route("/api/calculate", methods=["POST"])
 def api_calculate():
     try:
         data = request.get_json(force=True) or {}
 
-        # Validate num1
         try:
             num1 = float(data.get("num1", 0))
         except (TypeError, ValueError):
             return json_err("Invalid input for num1", 400)
 
-        # Validate num2
         try:
             num2 = float(data.get("num2", 0))
         except (TypeError, ValueError):
             return json_err("Invalid input for num2", 400)
 
-        # Validate operation
         op = (data.get("operation") or "").strip().lower()
         if not op:
             return json_err("Operation not specified", 400)
 
-        # Perform calculation
         if op in ("add", "+"):
             result = num1 + num2
         elif op in ("subtract", "-"):
@@ -239,36 +250,33 @@ def api_calculate():
         else:
             return json_err(f"Invalid operation: {op}", 400)
 
-        # Return success JSON
         return jsonify({"ok": True, "result": result})
 
-    except Exception as e:
+    except Exception:
         app.logger.exception("Calculator API unexpected error")
         return json_err("Internal server error", 500)
 
-# ----------------------
-#API: CONVERTER
-# ----------------------
+
+# ------------------------
+# API: Converter
+# ------------------------
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
     try:
         data = request.get_json(force=True) or {}
 
-        # Helper to accept multiple possible keys from frontend
         def pick(*keys):
             for k in keys:
                 if k in data and data[k] is not None:
                     return data[k]
             return None
 
-        # Get value
         raw_value = pick("value", "val", "amount")
         try:
             value = float(raw_value)
         except (TypeError, ValueError):
             return json_err("Invalid or missing 'value' (must be a number)", 400)
 
-        # Accept many forms for unit keys
         frm_raw = pick("from_unit", "fromUnit", "from", "frm")
         to_raw = pick("to_unit", "toUnit", "to", "t")
         category_raw = pick("category", "cat", None)
@@ -280,7 +288,6 @@ def api_convert():
         if not frm or not to:
             return json_err("Missing 'from' or 'to' unit", 400)
 
-        # Unit tables
         length = {
             "meter": 1.0, "m": 1.0,
             "kilometer": 1000.0, "km": 1000.0,
@@ -302,7 +309,6 @@ def api_convert():
 
         temp_units = {"celsius", "c", "fahrenheit", "f", "kelvin", "k"}
 
-        # Try to infer category if not provided
         def infer_category(frm_u, to_u):
             if frm_u in length or to_u in length:
                 return "length"
@@ -317,7 +323,6 @@ def api_convert():
             if not category:
                 return json_err("Could not infer category. Provide 'category' or use supported units.", 400)
 
-        # Conversion logic
         if category == "length":
             if frm not in length or to not in length:
                 return json_err("Unsupported length units", 400)
@@ -333,7 +338,6 @@ def api_convert():
             return jsonify({"ok": True, "result": result})
 
         elif category == "temperature":
-            # normalize names
             def norm(u):
                 u = u.lower()
                 if u in ("c", "celsius"): return "c"
@@ -366,17 +370,14 @@ def api_convert():
         else:
             return json_err("Invalid category", 400)
 
-    except Exception as e:
+    except Exception:
         app.logger.exception("Unit Converter API unexpected error")
         return json_err("Internal server error", 500)
 
 
-
-# ----------------------
-# API: JSON Formatter
-# Template posts to /api/format-json with { json_string, indent }
-# Returns { formatted }
-# ----------------------
+# ------------------------
+# API: JSON formatter
+# ------------------------
 @app.route("/api/format-json", methods=["POST"])
 def api_format_json():
     try:
@@ -389,16 +390,14 @@ def api_format_json():
     except json.JSONDecodeError as e:
         app.logger.exception("JSON parse error")
         return json_err(f"JSON parse error: {str(e)}", 400)
-    except Exception as e:
+    except Exception:
         app.logger.exception("JSON formatter error")
-        return json_err(str(e), 500)
+        return json_err("Internal server error", 500)
 
 
-# ----------------------
-# API: Text Tools
-# Template posts to /api/text-process with { text, operation }
-# For 'count' operation we return stats as well
-# ----------------------
+# ------------------------
+# API: Text tools
+# ------------------------
 @app.route("/api/text-process", methods=["POST"])
 def api_text_process():
     try:
@@ -435,17 +434,16 @@ def api_text_process():
 
         return json_err("Invalid operation", 400)
 
-    except Exception as e:
+    except Exception:
         app.logger.exception("Text tools error")
-        return json_err(str(e), 500)
+        return json_err("Internal server error", 500)
 
 
-# ----------------------
-# Error pages (for browser clients)
-# ----------------------
+# ------------------------
+# Error handlers
+# ------------------------
 @app.errorhandler(404)
 def page_not_found(e):
-    # if api path, return JSON
     if request.path.startswith("/api/"):
         return json_err("Not found", 404)
     return render_template("404.html"), 404
@@ -459,8 +457,8 @@ def server_error(e):
     return render_template("500.html"), 500
 
 
-# ----------------------
+# ------------------------
 # Run
-# ----------------------
+# ------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=81, debug=True)
